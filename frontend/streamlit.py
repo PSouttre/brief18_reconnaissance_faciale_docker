@@ -31,6 +31,7 @@ if st.button("Connexion") and username and password and photo:
         data = {"user_id": user_id}
         ver_resp = requests.post(verify_url, files=files, data=data)                       # Requête POST pour vérification
 
+        
         if ver_resp.status_code == 200 and ver_resp.json().get("success"):
             st.success("Bravo vous êtes connecté !")
         else:
@@ -41,7 +42,7 @@ if st.button("Connexion") and username and password and photo:
         st.info("Utilisateur inconnu → création d'un compte temporaire.")
         register_url = "http://api_flask:8000/register_face"
         files = {"file": (f"{username}.jpg", photo.getvalue(), "image/jpeg")}
-        data = {"user_id": username}   
+        data = {"username": username, "password": password}   
 
         reg_resp = requests.post(register_url, files=files, data=data)                    # Requête POST pour enregistrement
 
