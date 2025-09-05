@@ -1,5 +1,3 @@
-# Version du schéma docker-compose utilisé
-version: "3.9"
 
 # Liste des conteneurs à lancer
 services:
@@ -14,6 +12,7 @@ services:
         - api                                              # attend que le service api soit démarré avant de démarrer le frontend
     networks:
         - face_net                                         # réseau virtuel interne pour que les conteneurs communiquent entre eux (par leur nom de service)
+    restart: on-failure
 
   api:
     build: 
@@ -21,18 +20,22 @@ services:
       dockerfile: Dockerfile
     container_name: api_flask
     ports:
-        - "8000:8000"  
+      - "8000:8000"  
     depends_on:
-        - recognition                                      # attend que le service recognition soit démarré avant de démarrer l'API  
-        - db                                               # attend que le service db soit démarré avant de démarrer l'API
+      - recognition                                      # attend que le service recognition soit démarré avant de démarrer l'API  
+      - db                                               # attend que le service db soit démarré avant de démarrer l'API
+
     environment:
-        - DB_HOST=db                                       # nom du service de la base de données
-        - DB_PORT=5432                                     # port par défaut de PostgreSQL
-        - DB_USER=face_user                                # utilisateur de la base de données
-        - DB_PASSWORD=face_pass                            # mot de passe de la base de données
-        - DB_NAME=faces                                    # nom de la base de données
+      - DB_HOST=db                                       # nom du service de la base de données
+      - DB_PORT=5432                                     # port par défaut de PostgreSQL
+      - DB_USER=face_user                                # utilisateur de la base de données
+      - DB_PASSWORD=face_pass                            # mot de passe de la base de données
+      - DB_NAME=faces                                    # nom de la base de données
+    volumes:
+      - encodings_data:/app/recognition/encodings
     networks:
-        - face_net
+      - face_net
+    restart: on-failure
 
   recognition:                                           
     build: 
@@ -46,24 +49,26 @@ services:
     environment:
       - DB_HOST=db                                       # nom du service de la base de données
     volumes:
-      - ./recognition/data:/app/data                     # monte le dossier data de l'hôte vers /app/data dans le conteneur (pour persister les images)
-    networks:
+      - encodings_data:/app/recognition/encodings        # persistance des encodages des visages    
+    networks:             
       - face_net
+    restart: on-failure
 
   db:
     image: postgres:15                                   # image officielle de PostgreSQL
     container_name: db_service
     restart: always                                      # redémarre le conteneur automatiquement en cas de plantage
     environment:
-      POSTGRES_USER: username                            # utilisateur de la base de données
-      POSTGRES_PASSWORD: password                        # mot de passe de la base de données
+      POSTGRES_USER: face_user                           # utilisateur de la base de données
+      POSTGRES_PASSWORD: face_pass                       # mot de passe de la base de données
       POSTGRES_DB: faces                                 # nom de la base de données
     ports:
-      - "5432:5432"                                           # utile pour accéder en local à la base de données
+      - "5432:5432"                                      # utile pour accéder en local à la base de données
     volumes:
       - pgdata:/var/lib/postgresql/data                  # ce qui est stocké dans /var/lib/postgresql/data (dossier interne où Postgres met ses fichiers) est redirigé vers un espace persistant (pgdata)
     networks:
       - face_net
+
 
 networks:
   face_net:                                              # réseau virtuel interne pour que les conteneurs communiquent entre eux (par leur nom de service)
@@ -71,3 +76,4 @@ networks:
 
 volumes:
   pgdata:                                               # volume Docker pour persister les données de la base de données
+  encodings_data:                                       # volume Docker pour persister les encodages des visages
